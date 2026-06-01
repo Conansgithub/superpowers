@@ -16,6 +16,7 @@ from specanchor.coverage import coverage
 from specanchor.binding import OSResolver
 from specanchor.langs import LANGS
 from specanchor.descriptor import load_descriptor, merge, DescriptorError
+from specanchor import scaffold
 
 _DEFAULT_SKIP = {".git", "node_modules", "vendor", "testdata", "conformance"}
 
@@ -39,7 +40,39 @@ def _build_parser():
 
 
 def run(argv) -> int:
+    if argv and argv[0] == "adopt":
+        return _run_adopt(argv[1:])
+    if argv and argv[0] == "init":
+        return _run_init(argv[1:])
+    if argv and argv[0] == "check":
+        argv = argv[1:]
     return _run_check(argv)
+
+
+def _run_adopt(argv) -> int:
+    p = argparse.ArgumentParser(prog="spec-check adopt", add_help=True)
+    p.add_argument("-root", default=".")
+    p.add_argument("--lang", default=None, choices=sorted(LANGS.keys()))
+    p.add_argument("--skip", default=None, help="comma-separated extra skip dirs")
+    p.add_argument("--force", action="store_true")
+    try:
+        a = p.parse_args(argv)
+    except SystemExit:
+        return 2
+    skip = [s for s in a.skip.split(",") if s] if a.skip else None
+    return scaffold.adopt(a.root, lang=a.lang, skip=skip, force=a.force)
+
+
+def _run_init(argv) -> int:
+    p = argparse.ArgumentParser(prog="spec-check init", add_help=True)
+    p.add_argument("-root", default=".")
+    p.add_argument("--lang", required=True, choices=sorted(LANGS.keys()))
+    p.add_argument("--force", action="store_true")
+    try:
+        a = p.parse_args(argv)
+    except SystemExit:
+        return 2
+    return scaffold.init(a.root, a.lang, force=a.force)
 
 
 def _run_check(argv) -> int:

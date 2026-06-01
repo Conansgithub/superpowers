@@ -143,5 +143,31 @@ class TestDescriptorDriven(unittest.TestCase):
             self.assertEqual(spec_check.run(["-root", d]), 2)
 
 
+class TestDispatch(unittest.TestCase):
+    def test_adopt_writes_descriptor(self):
+        with tempfile.TemporaryDirectory() as d:
+            open(os.path.join(d, "go.mod"), "w").close()
+            self.assertEqual(spec_check.run(["adopt", "-root", d]), 0)
+            with open(os.path.join(d, ".spec-check.json")) as f:
+                self.assertEqual(json.load(f)["lang"], "go")
+
+    def test_init_scaffolds(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(spec_check.run(["init", "-root", d, "--lang", "go"]), 0)
+            self.assertTrue(os.path.exists(os.path.join(d, "INVARIANTS.md")))
+            self.assertTrue(os.path.exists(os.path.join(d, ".spec-check.json")))
+
+    def test_init_requires_lang(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(spec_check.run(["init", "-root", d]), 2)
+
+    def test_explicit_check_word(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
+                f.write("### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n")
+            self.assertEqual(spec_check.run(
+                ["check", "--lang", "go", "-invariants", os.path.join(d, "INVARIANTS.md"), "-root", d]), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
