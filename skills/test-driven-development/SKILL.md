@@ -110,6 +110,10 @@ Vague name, tests mock not code
 - Clear name
 - Real code (no mocks unless unavoidable)
 
+<!-- spec-weave:start -->
+> **Spec seam — `superpowers:spec-driven-development`:** run **Procedure 3 · Bind** — tag an invariant's guarding assertion with `// spec:INV-*`; write a behavior as a given/when/then test (no tag). See that skill.
+<!-- spec-weave:end -->
+
 ### Verify RED - Watch It Fail
 
 **MANDATORY. Never skip.**
