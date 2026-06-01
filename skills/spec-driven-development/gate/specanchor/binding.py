@@ -1,5 +1,7 @@
 import os
 import re
+import shlex
+import subprocess
 from enum import Enum
 from typing import Protocol
 
@@ -68,3 +70,32 @@ class OSResolver:
 
     def artifact_exists(self, path: str) -> bool:
         return os.path.exists(os.path.join(self.root, path))
+
+
+class ResolverError(Exception):
+    pass
+
+
+class ShellResolver:
+    """Resolves coverage bindings by shelling out, for non-code domains. The
+    binding is passed as argv: '<cmd> test <file> <fn>' or '<cmd> artifact <path>',
+    run with cwd=root. Exit 0 = resolved, non-zero = not. No timeout (static gate).
+    """
+
+    def __init__(self, cmd, root):
+        self._cmd = cmd
+        self._argv = shlex.split(cmd)
+        self.root = root
+
+    def _ok(self, *parts) -> bool:
+        try:
+            proc = subprocess.run(self._argv + list(parts), cwd=self.root)
+        except OSError as e:
+            raise ResolverError(f"{self._cmd!r}: {e}")
+        return proc.returncode == 0
+
+    def test_func_exists(self, file: str, fn: str) -> bool:
+        return self._ok("test", file, fn)
+
+    def artifact_exists(self, path: str) -> bool:
+        return self._ok("artifact", path)

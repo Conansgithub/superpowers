@@ -13,7 +13,7 @@ from specanchor.tags import scan_dir
 from specanchor.manifest import parse_manifest, ManifestError
 from specanchor.check import check
 from specanchor.coverage import coverage
-from specanchor.binding import OSResolver
+from specanchor.binding import OSResolver, ShellResolver, ResolverError
 from specanchor.langs import LANGS
 from specanchor.descriptor import load_descriptor, merge, DescriptorError
 from specanchor import scaffold
@@ -134,8 +134,13 @@ def _run_check(argv) -> int:
         return 2
     req_count = sum(len(m.requirements) for m in manifests)
 
+    resolver = ShellResolver(cfg.resolver, root) if cfg.resolver else OSResolver(root, lang)
     res = check(invs, tags)
-    cov = coverage(manifests, tags, OSResolver(root, lang), lang.pointer_ext)
+    try:
+        cov = coverage(manifests, tags, resolver, lang.pointer_ext)
+    except ResolverError as e:
+        print(f"spec-check: resolver: {e}", file=sys.stderr)
+        return 2
     blocking = res.blocking() or cov.blocking() or (cfg.anchor_strict and len(res.suspect) > 0)
     report(sys.stdout, invs, tags, res, cov, req_count, blocking)
     return 1 if blocking else 0

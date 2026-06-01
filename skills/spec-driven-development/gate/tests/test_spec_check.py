@@ -169,5 +169,30 @@ class TestDispatch(unittest.TestCase):
                 ["check", "--lang", "go", "-invariants", os.path.join(d, "INVARIANTS.md"), "-root", d]), 0)
 
 
+class TestResolverFlag(unittest.TestCase):
+    HEADER = "| 编号 | 规则句子 | 哪类 | 连到哪 | 状态 |\n|--|--|--|--|--|\n"
+
+    def _tree(self, d):
+        with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
+            f.write("### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n")
+        md = os.path.join(d, "spec", "demo")
+        os.makedirs(md)
+        with open(os.path.join(md, "spec.md"), "w") as f:
+            f.write(self.HEADER + "| DEMO-1 | x | 行为·当 | 测试: ghost_test.go::TestX | enforced |\n")
+
+    def test_resolver_binds_what_os_cannot(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._tree(d)
+            script = os.path.join(d, "r.sh")
+            with open(script, "w") as f:
+                f.write("#!/bin/sh\nexit 0\n")  # everything resolves
+            inv = os.path.join(d, "INVARIANTS.md")
+            # ghost_test.go::TestX 不存在：OSResolver → unbound → 1
+            self.assertEqual(spec_check.run(["--lang", "go", "-invariants", inv, "-root", d]), 1)
+            # shell resolver 一律连上 → bound → 0
+            self.assertEqual(spec_check.run(
+                ["--lang", "go", "-invariants", inv, "-root", d, "--resolver", f"sh {script}"]), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
