@@ -1,6 +1,6 @@
 ---
 name: spec-driven-development
-description: Use at the five workflow seams (brainstorm, plan, TDD, verification, finishing) to keep specs anchored to code — surface invariants, annotate plans with spec IDs, bind rules to tests/contracts, run the gate, and reconcile from reality. Project-agnostic; the gate is per-project.
+description: Use at the five workflow seams (brainstorm, plan, TDD, verification, finishing) to keep specs anchored to code — surface invariants, annotate plans with spec IDs, bind rules to tests/contracts, run the gate, and reconcile from reality. Project-agnostic; the gate engine ships with this skill and runs against the target project.
 ---
 
 # Spec-Driven Development
@@ -32,7 +32,11 @@ Tag each plan task with the spec IDs it touches (`INV-*` for invariants, `<modul
 
 ## Procedure 4 · Gate
 **Seam:** `verification-before-completion`.
-Run your project's spec gate (B1–B4 + coverage) and contracts-check. Red = not done; fix before any completion claim. The gate is per-project and honors `references/gate-contract.md`; this skill ships no engine. **Enforcement lives here at the seam, not in CI.**
+Run the gate engine shipped with this skill against the project (B1–B4 + coverage), plus contracts-check. Red = not done; fix before any completion claim. The engine is at `gate/spec_check.py` (stdlib python3, honors `references/gate-contract.md`); point it at the project:
+
+    python3 "$SKILL_DIR/gate/spec_check.py" -invariants <INVARIANTS path> -root <root> --lang <go|python|…> [--skip <dirs>]
+
+`$SKILL_DIR` is this skill's own directory. Supply the project's invariants path, language, and any extra skips — e.g. a Go project whose baseline lives at `docs/migration/INVARIANTS.md`: `-invariants docs/migration/INVARIANTS.md -root . --lang go`. The formal per-project descriptor (auto-detected paths/lang) is future work; for now pass the flags explicitly. **Enforcement lives here at the seam, not in CI.**
 
 ## Procedure 5 · Reconcile
 **Seam:** start of `finishing-a-development-branch`, before merge/PR.
