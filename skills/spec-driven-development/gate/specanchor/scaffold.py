@@ -42,3 +42,49 @@ def probe_invariants(root):
         if os.path.exists(os.path.join(root, rel)):
             return rel
     return None
+
+
+def _write_descriptor(path, descriptor):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(descriptor, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
+def adopt(root, lang=None, skip=None, force=False, out=sys.stdout):
+    """Detect an existing project's language/paths and write .spec-check.json.
+    Returns an exit code (0 ok, 2 usage). Never guesses an ambiguous language.
+    """
+    path = os.path.join(root, DESCRIPTOR_NAME)
+    if os.path.exists(path) and not force:
+        print(f"adopt: {DESCRIPTOR_NAME} exists; pass --force to overwrite", file=sys.stderr)
+        return 2
+    if lang is None:
+        try:
+            lang = detect_lang(root)
+        except ValueError as e:
+            print(f"adopt: {e}", file=sys.stderr)
+            return 2
+    if lang not in LANGS:
+        print(f"adopt: unknown lang {lang!r}", file=sys.stderr)
+        return 2
+
+    invariants = probe_invariants(root)
+    missing_inv = invariants is None
+    if missing_inv:
+        invariants = "docs/migration/INVARIANTS.md"
+    manifests = "spec/*/spec.md" if os.path.isdir(os.path.join(root, "spec")) else ""
+
+    descriptor = {
+        "lang": lang,
+        "invariants": invariants,
+        "manifests": manifests,
+        "skip": list(skip or []),
+        "anchor_strict": False,
+        "resolver": None,
+    }
+    _write_descriptor(path, descriptor)
+    print(f"adopt: wrote {DESCRIPTOR_NAME} "
+          f"(lang={lang}, invariants={invariants}, manifests={manifests or 'disabled'})", file=out)
+    if missing_inv:
+        print(f"adopt: no INVARIANTS.md found; defaulted to {invariants} — run 'init' or create it", file=out)
+    return 0
