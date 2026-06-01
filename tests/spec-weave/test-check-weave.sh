@@ -70,5 +70,10 @@ B5=$(mktemp -d); make_good "$B5"
 sed 's/Procedure 2 · Annotate/Procedure 9 · Bogus/' "$B5/skills/writing-plans/SKILL.md" > "$B5/tmp" && mv "$B5/tmp" "$B5/skills/writing-plans/SKILL.md"
 assert_msg "C5 wrong procedure name fails" "marker block must name" "$B5"
 
-rm -rf "$G" "$B1" "$B2" "$B3" "$B4" "$B5"
+B6=$(mktemp -d); make_good "$B6"
+# procedure names present only as body text (Integration-style), not as ## headings → C3 must still fire
+printf '## Procedures\n- superpowers:brainstorming → Procedure 1 · Seed\n- Procedure 2 · Annotate\n- Procedure 3 · Bind\n- Procedure 4 · Gate\n- Procedure 5 · Reconcile\n' > "$B6/skills/spec-driven-development/SKILL.md"
+assert_msg "C3 requires real headings not just name mentions" "C3 SKILL.md missing heading" "$B6"
+
+rm -rf "$G" "$B1" "$B2" "$B3" "$B4" "$B5" "$B6"
 if [ "$fails" = 0 ]; then echo "ALL PASS"; exit 0; else echo "$fails FAILED"; exit 1; fi

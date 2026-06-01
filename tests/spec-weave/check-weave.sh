@@ -24,7 +24,7 @@ done
 # C3
 if [ -f "$SKILL_MD" ]; then
   for p in "${PROCS[@]}"; do
-    grep -qF "$p" "$SKILL_MD" || err "C3 SKILL.md missing heading: $p"
+    grep -qF "## $p" "$SKILL_MD" || err "C3 SKILL.md missing heading: $p"
   done
 fi
 
@@ -40,7 +40,7 @@ for i in "${!SEAMS[@]}"; do
   block=$(sed -n '/spec-weave:start/,/spec-weave:end/p' "$f")
   if ! printf '%s\n' "$block" | grep -qF "$want"; then
     err "C5 $s: marker block must name '$want'"
-  elif [ -f "$SKILL_MD" ] && ! grep -qF "$want" "$SKILL_MD"; then
+  elif [ -f "$SKILL_MD" ] && ! grep -qF "## $want" "$SKILL_MD"; then
     err "C5 $s: '$want' is not a heading in SKILL.md"
   fi
 done
