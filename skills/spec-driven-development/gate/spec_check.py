@@ -15,35 +15,67 @@ from specanchor.check import check
 from specanchor.coverage import coverage
 from specanchor.binding import OSResolver
 from specanchor.langs import LANGS
+from specanchor.descriptor import load_descriptor, merge, DescriptorError
 
 _DEFAULT_SKIP = {".git", "node_modules", "vendor", "testdata", "conformance"}
 
 
 def _build_parser():
     p = argparse.ArgumentParser(prog="spec-check", add_help=True)
-    p.add_argument("-invariants", default="docs/migration/INVARIANTS.md",
-                   help="path to INVARIANTS.md")
+    p.add_argument("-invariants", default=None,
+                   help="path to INVARIANTS.md (default docs/migration/INVARIANTS.md)")
     p.add_argument("-root", default=".", help="root dir scanned for spec: tags")
     p.add_argument("-anchor-strict", dest="anchor_strict", action="store_true",
-                   help="treat B4 fingerprint-drift suspects as blocking")
-    p.add_argument("-manifests", default="spec/*/spec.md",
+                   default=None, help="treat B4 fingerprint-drift suspects as blocking")
+    p.add_argument("-manifests", default=None,
                    help="glob (relative to -root) for manifests; empty disables coverage")
-    p.add_argument("--lang", required=True, choices=sorted(LANGS.keys()),
-                   help="project language (selects test-file suffix + behavior regex)")
-    p.add_argument("--skip", default="",
+    p.add_argument("--lang", default=None, choices=sorted(LANGS.keys()),
+                   help="project language (flag or .spec-check.json; required if neither)")
+    p.add_argument("--skip", default=None,
                    help="comma-separated extra directory base-names to prune")
+    p.add_argument("--resolver", default=None,
+                   help="external command resolving coverage bindings (non-code domains)")
     return p
 
 
 def run(argv) -> int:
+    return _run_check(argv)
+
+
+def _run_check(argv) -> int:
     try:
         args = _build_parser().parse_args(argv)
     except SystemExit:
-        return 2  # missing --lang, bad flag, or -h all surface as usage exit
-    lang = LANGS[args.lang]
+        return 2  # bad flag or -h surfaces as usage exit
 
+    root = args.root
     try:
-        with open(args.invariants, "r", encoding="utf-8", errors="surrogateescape") as f:
+        descriptor = load_descriptor(root)
+    except DescriptorError as e:
+        print(f"spec-check: {e}", file=sys.stderr)
+        return 2
+
+    flags = {
+        "lang": args.lang,
+        "invariants": args.invariants,
+        "manifests": args.manifests,
+        "anchor_strict": args.anchor_strict,
+        "resolver": args.resolver,
+        "skip": [s for s in args.skip.split(",") if s] if args.skip else None,
+    }
+    cfg = merge(flags, descriptor or {})
+
+    if cfg.lang is None:
+        print("spec-check: --lang required (no flag and no .spec-check.json lang)", file=sys.stderr)
+        return 2
+    lang = LANGS.get(cfg.lang)
+    if lang is None:
+        print(f"spec-check: unknown lang {cfg.lang!r}", file=sys.stderr)
+        return 2
+
+    invariants_path = os.path.join(root, cfg.invariants) if cfg.invariants_from_descriptor else cfg.invariants
+    try:
+        with open(invariants_path, "r", encoding="utf-8", errors="surrogateescape") as f:
             md = f.read()
     except OSError as e:
         print(f"spec-check: read invariants: {e}", file=sys.stderr)
@@ -55,23 +87,23 @@ def run(argv) -> int:
         return 2
 
     skip = set(_DEFAULT_SKIP)
-    skip.update(s for s in args.skip.split(",") if s)
+    skip.update(cfg.skip)
     try:
-        tags = scan_dir(args.root, [lang.test_suffix], skip)
+        tags = scan_dir(root, [lang.test_suffix], skip)
     except OSError as e:
         print(f"spec-check: scan tags: {e}", file=sys.stderr)
         return 2
 
     try:
-        manifests = _load_manifests(args.root, args.manifests)
+        manifests = _load_manifests(root, cfg.manifests)
     except (OSError, ManifestError) as e:
         print(f"spec-check: load manifests: {e}", file=sys.stderr)
         return 2
     req_count = sum(len(m.requirements) for m in manifests)
 
     res = check(invs, tags)
-    cov = coverage(manifests, tags, OSResolver(args.root, lang), lang.pointer_ext)
-    blocking = res.blocking() or cov.blocking() or (args.anchor_strict and len(res.suspect) > 0)
+    cov = coverage(manifests, tags, OSResolver(root, lang), lang.pointer_ext)
+    blocking = res.blocking() or cov.blocking() or (cfg.anchor_strict and len(res.suspect) > 0)
     report(sys.stdout, invs, tags, res, cov, req_count, blocking)
     return 1 if blocking else 0
 

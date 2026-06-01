@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -109,6 +110,37 @@ class TestRunManifestCoverage(unittest.TestCase):
             _write(d, self.INV)
             _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 行为·当 | enforced |\n")
             self.assertEqual(_run(d), 2)
+
+
+class TestDescriptorDriven(unittest.TestCase):
+    def test_descriptor_supplies_lang_and_invariants(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
+                f.write("### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n")
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"lang": "go", "invariants": "INVARIANTS.md"}, f)
+            self.assertEqual(spec_check.run(["-root", d]), 0)
+
+    def test_flag_overrides_descriptor_lang(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
+                f.write("### INV-LEDGER-1 — x\nStatus: enforced\nSince: 2026-06-01\n")
+            with open(os.path.join(d, "x_test.go"), "w") as f:
+                f.write("// spec:INV-LEDGER-1\n")
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"lang": "python", "invariants": "INVARIANTS.md"}, f)
+            # descriptor 说 python → 扫 _test.py、漏掉 go tag → enforced 无 tag → 1
+            self.assertEqual(spec_check.run(["-root", d]), 1)
+            # flag 强制 go → 找到 tag → 0
+            self.assertEqual(spec_check.run(["-root", d, "--lang", "go"]), 0)
+
+    def test_malformed_descriptor_is_usage_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
+                f.write("### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n")
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                f.write("{ bad")
+            self.assertEqual(spec_check.run(["-root", d]), 2)
 
 
 if __name__ == "__main__":
