@@ -32,11 +32,17 @@ Tag each plan task with the spec IDs it touches (`INV-*` for invariants, `<modul
 
 ## Procedure 4 · Gate
 **Seam:** `verification-before-completion`.
-Run the gate engine shipped with this skill against the project (B1–B4 + coverage), plus contracts-check. Red = not done; fix before any completion claim. The engine is at `gate/spec_check.py` (stdlib python3, honors `references/gate-contract.md`); point it at the project:
+Run the gate engine shipped with this skill against the project (B1–B4 + coverage), plus contracts-check. Red = not done; fix before any completion claim. The engine is at `gate/spec_check.py` (stdlib python3, honors `references/gate-contract.md`).
+
+If the project has a `.spec-check.json` (run `python3 "$SKILL_DIR/gate/spec_check.py" adopt -root <root>` once to create it), point the gate at it — no per-project flags:
+
+    python3 "$SKILL_DIR/gate/spec_check.py" -root <root>
+
+Otherwise pass them explicitly (`--lang` is required; precedence is flag > descriptor > default):
 
     python3 "$SKILL_DIR/gate/spec_check.py" -invariants <INVARIANTS path> -root <root> --lang <go|python|…> [--skip <dirs>]
 
-`$SKILL_DIR` is this skill's own directory. Supply the project's invariants path, language, and any extra skips — e.g. a Go project whose baseline lives at `docs/migration/INVARIANTS.md`: `-invariants docs/migration/INVARIANTS.md -root . --lang go`. The formal per-project descriptor (auto-detected paths/lang) is future work; for now pass the flags explicitly. **Enforcement lives here at the seam, not in CI.**
+`$SKILL_DIR` is this skill's own directory. For a non-code domain, add a `langs.py` row and pass `--resolver <cmd>` (it answers `test <file> <fn>` / `artifact <path>` by exit code). **Enforcement lives here at the seam, not in CI.**
 
 ## Procedure 5 · Reconcile
 **Seam:** start of `finishing-a-development-branch`, before merge/PR.
