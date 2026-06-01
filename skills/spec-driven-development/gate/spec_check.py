@@ -43,7 +43,7 @@ def run(argv) -> int:
     lang = LANGS[args.lang]
 
     try:
-        with open(args.invariants, "r", encoding="utf-8") as f:
+        with open(args.invariants, "r", encoding="utf-8", errors="surrogateescape") as f:
             md = f.read()
     except OSError as e:
         print(f"spec-check: read invariants: {e}", file=sys.stderr)
@@ -84,7 +84,7 @@ def _load_manifests(root, pattern):
         return []
     out = []
     for p in sorted(glob.glob(os.path.join(root, pattern))):
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, "r", encoding="utf-8", errors="surrogateescape") as f:
             out.append(parse_manifest(p, f.read()))
     return out
 
@@ -98,7 +98,7 @@ def report(w, invs, tags, res, cov, req_count, blocking):
     for inv_id in res.uncovered:
         print(f"  UNCOVERED {inv_id} — enforced but no test carries spec:{inv_id}", file=w)
     for req in cov.unbound:
-        print(f"  UNBOUND   {req.id} at {req.file}:{req.line} — enforced but {req.pointer!r} resolves to nothing", file=w)
+        print(f'  UNBOUND   {req.id} at {req.file}:{req.line} — enforced but "{req.pointer}" resolves to nothing', file=w)
     for tg in res.orphans:
         print(f"  ORPHAN    spec:{tg.id} at {tg.file}:{tg.line} — no such invariant", file=w)
     for s in res.suspect:

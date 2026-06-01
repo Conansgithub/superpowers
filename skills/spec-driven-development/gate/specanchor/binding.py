@@ -58,7 +58,7 @@ class OSResolver:
 
     def test_func_exists(self, file: str, fn: str) -> bool:
         try:
-            with open(os.path.join(self.root, file), "r", encoding="utf-8") as f:
+            with open(os.path.join(self.root, file), "r", encoding="utf-8", errors="surrogateescape") as f:
                 content = f.read()
         except OSError:
             return False

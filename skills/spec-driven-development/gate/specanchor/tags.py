@@ -38,6 +38,6 @@ def scan_dir(root: str, suffixes, skip):
             if not any(name.endswith(s) for s in suffixes):
                 continue
             path = os.path.join(dirpath, name)
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8", errors="surrogateescape") as f:
                 refs.extend(extract_tags(path, f.read()))
     return refs

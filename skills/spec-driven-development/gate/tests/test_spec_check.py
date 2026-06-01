@@ -60,6 +60,13 @@ class TestRunExitCodes(unittest.TestCase):
             _write(d, "### INV-RES-1 — x\nStatus: stated\nSince: 2026-05-31\n")
             self.assertEqual(spec_check.run(["-invariants", os.path.join(d, "INVARIANTS.md"), "-root", d]), 2)
 
+    def test_non_utf8_test_file_does_not_crash(self):
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "### INV-LEDGER-1 — x\nStatus: enforced\nSince: 2026-05-31\n")
+            with open(os.path.join(d, "y_test.go"), "wb") as f:
+                f.write(b"\xff\xfe// spec:INV-LEDGER-1\n")
+            self.assertEqual(_run(d), 0)
+
     def test_anchor_advisory_then_strict(self):
         inv = "### INV-LEDGER-1 — x\nHolds: refund negates the recorded delta\nStatus: enforced\nSince: 2026-05-31\n"
         with tempfile.TemporaryDirectory() as d:

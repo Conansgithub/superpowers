@@ -31,6 +31,13 @@ class TestExtractTags(unittest.TestCase):
 
 
 class TestScanDir(unittest.TestCase):
+    def test_tolerates_non_utf8_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            with open(os.path.join(root, "a_test.go"), "wb") as f:
+                f.write(b"\xff\xfe// spec:INV-LEDGER-1\n")  # invalid UTF-8 prefix
+            got = scan_dir(root, ["_test.go"], {".git"})  # must not raise
+            self.assertEqual([t.id for t in got], ["INV-LEDGER-1"])
+
     def test_filters_suffix_and_skips_dirs(self):
         with tempfile.TemporaryDirectory() as root:
             with open(os.path.join(root, "a_test.go"), "w") as f:
