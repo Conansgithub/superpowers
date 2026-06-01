@@ -113,6 +113,10 @@ digraph brainstorming {
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
+<!-- spec-weave:start -->
+> **Spec seam — `superpowers:spec-driven-development`:** run **Procedure 1 · Seed** — extract the durable invariants this design establishes into `INVARIANTS.md` with `Status: stated`. Capture, don't author. See that skill.
+<!-- spec-weave:end -->
+
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
 

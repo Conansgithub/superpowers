@@ -37,6 +37,10 @@ BEFORE claiming any status or expressing satisfaction:
 Skip any step = lying, not verifying
 ```
 
+<!-- spec-weave:start -->
+> **Spec seam — `superpowers:spec-driven-development`:** run **Procedure 4 · Gate** — run the project's spec gate (B1–B4 + coverage) and contracts-check; red = not done. Enforcement lives here, not in CI. See that skill.
+<!-- spec-weave:end -->
+
 ## Common Failures
 
 | Claim | Requires | Not Sufficient |

@@ -37,6 +37,10 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
+<!-- spec-weave:start -->
+> **Spec seam — `superpowers:spec-driven-development`:** before finishing, run **Procedure 5 · Reconcile** — reconcile specs from the real diff+tests (flip stated→enforced, add new rules, mark violated, update fingerprints) and re-run the gate green. See that skill.
+<!-- spec-weave:end -->
+
 ### Step 2: Detect Environment
 
 **Determine workspace state before presenting options:**

@@ -62,6 +62,10 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Task Structure
 
+<!-- spec-weave:start -->
+> **Spec seam — `superpowers:spec-driven-development`:** run **Procedure 2 · Annotate** — tag each task below with the spec IDs it touches (`INV-*` / `<module>-*`); register new rules as `stated`. See that skill.
+<!-- spec-weave:end -->
+
 ````markdown
 ### Task N: [Component Name]
 
