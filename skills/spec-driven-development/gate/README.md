@@ -6,11 +6,21 @@ Enforcement lives at the verification/finishing seams — not in any project's C
 ## Run
 
 ```bash
+# Explicit flags (legacy / no descriptor):
 python3 spec_check.py --lang go -invariants docs/migration/INVARIANTS.md -root .
+
+# Or declare config once in <root>/.spec-check.json, then:
+python3 spec_check.py -root .                  # check, reads .spec-check.json
+python3 spec_check.py adopt -root .            # detect lang/paths, write .spec-check.json
+python3 spec_check.py init -root . --lang go   # scaffold a greenfield project
 ```
 
 Exit: `0` pass / `1` block (B1–B4 + coverage) / `2` usage or IO error.
-`--lang` is required (no implicit default). `--skip a,b` prunes extra dirs.
+Precedence: explicit flag > `.spec-check.json` > built-in default. `--lang` is
+required unless the descriptor supplies it. `--skip a,b` prunes extra dirs.
+`--resolver <cmd>` swaps coverage binding resolution out to an external command
+(non-code domains): it receives `test <file> <fn>` or `artifact <path>` as argv,
+exit 0 = resolved.
 
 ## Test
 
