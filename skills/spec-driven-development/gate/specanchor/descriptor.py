@@ -1,5 +1,7 @@
 import json
 import os
+from dataclasses import dataclass
+from typing import Optional
 
 DESCRIPTOR_NAME = ".spec-check.json"
 _KEYS = {"lang", "invariants", "manifests", "skip", "anchor_strict", "resolver"}
@@ -40,3 +42,49 @@ def _typecheck(path, data):
         ok = isinstance(data["skip"], list) and all(isinstance(x, str) for x in data["skip"])
         if not ok:
             raise DescriptorError(f"{path}: skip must be a list of strings")
+
+
+_DEFAULTS = {
+    "lang": None,
+    "invariants": "docs/migration/INVARIANTS.md",
+    "manifests": "spec/*/spec.md",
+    "skip": [],
+    "anchor_strict": False,
+    "resolver": None,
+}
+
+
+@dataclass
+class ResolvedConfig:
+    lang: Optional[str]
+    invariants: str
+    manifests: str
+    skip: list
+    anchor_strict: bool
+    resolver: Optional[str]
+    invariants_from_descriptor: bool
+
+
+def merge(flags, descriptor):
+    """Resolve each setting by precedence: explicit flag > descriptor > default.
+    `flags` maps key -> value where None means 'not given on the CLI'. `descriptor`
+    is the loaded dict (or {} when absent). Only records whether `invariants` came
+    from the descriptor (so the caller can join it to root); does no path joining.
+    """
+    d = descriptor or {}
+
+    def pick(key):
+        if flags.get(key) is not None:
+            return flags[key], False
+        if d.get(key) is not None:
+            return d[key], True
+        return _DEFAULTS[key], False
+
+    lang, _ = pick("lang")
+    invariants, inv_from_desc = pick("invariants")
+    manifests, _ = pick("manifests")
+    anchor_strict, _ = pick("anchor_strict")
+    resolver, _ = pick("resolver")
+    skip, _ = pick("skip")
+    return ResolvedConfig(lang, invariants, manifests, list(skip),
+                          bool(anchor_strict), resolver, inv_from_desc)
