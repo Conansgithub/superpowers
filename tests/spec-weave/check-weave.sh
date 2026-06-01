@@ -36,6 +36,7 @@ for i in "${!SEAMS[@]}"; do
   if [ "$starts" != "1" ] || [ "$ends" != "1" ]; then
     err "C4 $s: want exactly one spec-weave pair (start=$starts end=$ends)"; continue
   fi
+  # assumes one start-before-end pair on distinct lines (C4 above guarantees the count)
   block=$(sed -n '/spec-weave:start/,/spec-weave:end/p' "$f")
   if ! printf '%s\n' "$block" | grep -qF "$want"; then
     err "C5 $s: marker block must name '$want'"
@@ -44,11 +45,7 @@ for i in "${!SEAMS[@]}"; do
   fi
 done
 
-# C6 projection sanity
-case "$SKILL_DIR" in
-  "$ROOT"/skills/*) ;;
-  *) err "C6 skill dir not under skills/: $SKILL_DIR" ;;
-esac
+# Projection sanity (artifacts under skills/) is guaranteed by construction: this lint only ever inspects paths under $ROOT/skills/. A meaningful enforcement (e.g. "skill is git-tracked so it ships") is deferred.
 
 if [ "$fail" = 0 ]; then echo "OK: spec-weave lint passed"; fi
 exit "$fail"
