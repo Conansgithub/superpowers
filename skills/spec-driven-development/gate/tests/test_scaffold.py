@@ -3,7 +3,7 @@ import json
 import os
 import tempfile
 import unittest
-from specanchor.scaffold import detect_lang, probe_invariants, adopt
+from specanchor.scaffold import detect_lang, probe_invariants, adopt, init
 
 
 class TestDetectLang(unittest.TestCase):
@@ -78,6 +78,26 @@ class TestAdopt(unittest.TestCase):
                 f.write("{}")
             self.assertEqual(adopt(d, out=io.StringIO()), 2)
             self.assertEqual(adopt(d, force=True, out=io.StringIO()), 0)
+
+
+class TestInit(unittest.TestCase):
+    def test_scaffolds_three(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(init(d, "go", out=io.StringIO()), 0)
+            self.assertTrue(os.path.exists(os.path.join(d, "INVARIANTS.md")))
+            self.assertTrue(os.path.exists(os.path.join(d, "spec", "sample", "spec.md")))
+            with open(os.path.join(d, ".spec-check.json")) as f:
+                self.assertEqual(json.load(f)["lang"], "go")
+
+    def test_refuses_clobber(self):
+        with tempfile.TemporaryDirectory() as d:
+            open(os.path.join(d, "INVARIANTS.md"), "w").close()
+            self.assertEqual(init(d, "go", out=io.StringIO()), 2)
+            self.assertEqual(init(d, "go", force=True, out=io.StringIO()), 0)
+
+    def test_unknown_lang(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(init(d, "ruby", out=io.StringIO()), 2)
 
 
 if __name__ == "__main__":

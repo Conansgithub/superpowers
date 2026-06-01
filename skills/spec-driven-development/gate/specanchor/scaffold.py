@@ -88,3 +88,42 @@ def adopt(root, lang=None, skip=None, force=False, out=sys.stdout):
     if missing_inv:
         print(f"adopt: no INVARIANTS.md found; defaulted to {invariants} — run 'init' or create it", file=out)
     return 0
+
+
+def _template(name):
+    with open(os.path.join(_REFS, name), "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def _write_text(path, text):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def init(root, lang, force=False, out=sys.stdout):
+    """Scaffold a greenfield project: INVARIANTS.md + spec/sample/spec.md +
+    .spec-check.json (from the skill's reference templates). Returns an exit code.
+    """
+    if lang not in LANGS:
+        print(f"init: unknown lang {lang!r}", file=sys.stderr)
+        return 2
+    rel_targets = ["INVARIANTS.md", os.path.join("spec", "sample", "spec.md"), DESCRIPTOR_NAME]
+    existing = [t for t in rel_targets if os.path.exists(os.path.join(root, t))]
+    if existing and not force:
+        print(f"init: refusing to overwrite {existing}; pass --force", file=sys.stderr)
+        return 2
+
+    _write_text(os.path.join(root, "INVARIANTS.md"), _template("invariants-template.md"))
+    _write_text(os.path.join(root, "spec", "sample", "spec.md"), _template("manifest-template.md"))
+    descriptor = {
+        "lang": lang,
+        "invariants": "INVARIANTS.md",
+        "manifests": "spec/*/spec.md",
+        "skip": [],
+        "anchor_strict": False,
+        "resolver": None,
+    }
+    _write_descriptor(os.path.join(root, DESCRIPTOR_NAME), descriptor)
+    print(f"init: scaffolded INVARIANTS.md, spec/sample/spec.md, {DESCRIPTOR_NAME} (lang={lang})", file=out)
+    return 0
