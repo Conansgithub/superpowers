@@ -1,0 +1,1 @@
+--lang go -invariants tree/INVARIANTS.md -root tree -manifests spec/*/spec.md
