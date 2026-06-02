@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 DESCRIPTOR_NAME = ".spec-check.json"
-_KEYS = {"lang", "invariants", "manifests", "skip", "anchor_strict", "resolver"}
+_KEYS = {"lang", "invariants", "manifests", "skip", "anchor_strict", "resolver",
+         "index", "shape_strict"}
 
 
 class DescriptorError(Exception):
@@ -33,15 +34,19 @@ def load_descriptor(root):
 
 
 def _typecheck(path, data):
-    for k in ("lang", "invariants", "manifests", "resolver"):
+    for k in ("lang", "invariants", "manifests", "resolver", "index"):
         if k in data and data[k] is not None and not isinstance(data[k], str):
             raise DescriptorError(f"{path}: {k} must be a string")
+    if data.get("index") == "":
+        raise DescriptorError(f"{path}: index must be a non-empty string or omitted")
     if "anchor_strict" in data and not isinstance(data["anchor_strict"], bool):
         raise DescriptorError(f"{path}: anchor_strict must be a boolean")
     if "skip" in data:
         ok = isinstance(data["skip"], list) and all(isinstance(x, str) for x in data["skip"])
         if not ok:
             raise DescriptorError(f"{path}: skip must be a list of strings")
+    if "shape_strict" in data and data["shape_strict"] not in ("warn", "block"):
+        raise DescriptorError(f"{path}: shape_strict must be 'warn' or 'block'")
 
 
 _DEFAULTS = {
@@ -51,6 +56,8 @@ _DEFAULTS = {
     "skip": [],
     "anchor_strict": False,
     "resolver": None,
+    "index": None,
+    "shape_strict": "block",
 }
 
 
@@ -63,6 +70,9 @@ class ResolvedConfig:
     anchor_strict: bool
     resolver: Optional[str]
     invariants_from_descriptor: bool
+    index: Optional[str]
+    index_from_descriptor: bool
+    shape_strict: str
 
 
 def merge(flags, descriptor):
@@ -86,5 +96,8 @@ def merge(flags, descriptor):
     anchor_strict, _ = pick("anchor_strict")
     resolver, _ = pick("resolver")
     skip, _ = pick("skip")
+    index, index_from_desc = pick("index")
+    shape_strict, _ = pick("shape_strict")
     return ResolvedConfig(lang, invariants, manifests, list(skip),
-                          bool(anchor_strict), resolver, inv_from_desc)
+                          bool(anchor_strict), resolver, inv_from_desc,
+                          index, index_from_desc, str(shape_strict))

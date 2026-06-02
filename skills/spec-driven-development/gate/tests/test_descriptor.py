@@ -37,6 +37,26 @@ class TestLoadDescriptor(unittest.TestCase):
             with self.assertRaises(DescriptorError):
                 load_descriptor(d)
 
+    def test_index_and_shape_strict_valid(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"lang": "go", "index": "spec-index.json", "shape_strict": "warn"}, f)
+            self.assertEqual(load_descriptor(d),
+                             {"lang": "go", "index": "spec-index.json", "shape_strict": "warn"})
+
+    def test_shape_strict_bad_value(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"shape_strict": "loud"}, f)
+            with self.assertRaises(DescriptorError):
+                load_descriptor(d)
+
+    def test_index_null_accepted(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"index": None}, f)
+            self.assertEqual(load_descriptor(d), {"index": None})
+
 
 class TestMerge(unittest.TestCase):
     def test_default_when_empty(self):
@@ -69,6 +89,16 @@ class TestMerge(unittest.TestCase):
     def test_anchor_strict_from_descriptor(self):
         cfg = merge({}, {"anchor_strict": True})
         self.assertTrue(cfg.anchor_strict)
+
+    def test_index_shape_defaults(self):
+        cfg = merge({}, {})
+        self.assertIsNone(cfg.index)
+        self.assertEqual(cfg.shape_strict, "block")
+
+    def test_index_from_descriptor(self):
+        cfg = merge({}, {"index": "out.json"})
+        self.assertEqual(cfg.index, "out.json")
+        self.assertTrue(cfg.index_from_descriptor)
 
 
 if __name__ == "__main__":
