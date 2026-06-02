@@ -14,6 +14,7 @@ from specanchor.manifest import parse_manifest, ManifestError
 from specanchor.check import check
 from specanchor.coverage import coverage
 from specanchor.binding import OSResolver, ShellResolver, ResolverError
+from specanchor.refs import dangling
 from specanchor.langs import LANGS
 from specanchor.descriptor import load_descriptor, merge, DescriptorError
 from specanchor import scaffold
@@ -154,15 +155,19 @@ def _run_check(argv) -> int:
                 shape_errs.append((req.id, req.module, e))
     shape_block = bool(shape_errs) and cfg.shape_strict == "block"
 
+    dang = dangling(manifests, invs)
+
     if cfg.index:
         idx_path = os.path.join(root, cfg.index) if cfg.index_from_descriptor else cfg.index
         emit_index(build_index(manifests, tags, resolver, lang.pointer_ext, root), idx_path)
 
-    blocking = (res.blocking() or cov.blocking() or shape_block
+    blocking = (res.blocking() or cov.blocking() or shape_block or bool(dang)
                 or (cfg.anchor_strict and len(res.suspect) > 0))
     for rid, mod, e in shape_errs:
         label = "SHAPE" if cfg.shape_strict == "block" else "shape"
         print(f"  {label:<9} {rid} ({mod}) — {e}", file=sys.stdout)
+    for ref_id, where in dang:
+        print(f"  DANGLING  {ref_id} referenced at {where} — resolves to no live rule", file=sys.stdout)
     report(sys.stdout, invs, tags, res, cov, req_count, blocking)
     return 1 if blocking else 0
 
