@@ -12,8 +12,10 @@ class ManifestError(ValueError):
 class Requirement:
     id: str
     sentence: str = ""
-    kind: str = ""      # raw 哪类 label
-    pointer: str = ""   # raw 连到哪 cell — classified at coverage time
+    kind: str = ""      # raw 类型 label
+    pointer: str = ""   # raw 绑定 cell — classified at coverage time
+    scope: str = ""     # raw scope cell
+    why: str = ""       # raw Why cell
     status: str = ""
     module: str = ""
     file: str = ""
@@ -28,6 +30,8 @@ class Manifest:
 
 # "## <module> — 清单" header (em-dash U+2014).
 _MODULE_RE = re.compile(r"^##\s+(.+?)\s+—\s+清单\s*$")
+
+EXPECTED_HEADER = ["编号", "陈述", "Why", "类型", "绑定", "scope", "状态"]
 
 
 def _table_cells(line: str):
@@ -74,15 +78,18 @@ def parse_manifest(path: str, content: str) -> Manifest:
         cells = _table_cells(line)
         if cells is None:
             continue
-        if cells[0] == "编号":
+        if cells and cells[0] == "编号":
+            if cells != EXPECTED_HEADER:
+                raise ManifestError(
+                    f"{path}:{i+1}: 表头必须为 {EXPECTED_HEADER},得到 {cells}")
             in_table = True
             continue
         if not in_table:
             continue
-        if len(cells) != 5:
-            raise ManifestError(f"{path}:{i+1}: expected 5 columns, got {len(cells)}")
+        if len(cells) != 7:
+            raise ManifestError(f"{path}:{i+1}: expected 7 columns, got {len(cells)}")
         try:
-            status = _parse_status(cells[4])
+            status = _parse_status(cells[6])
         except ManifestError as e:
             raise ManifestError(f"{path}:{i+1}: {e}")
         rid = cells[0]
@@ -91,8 +98,9 @@ def parse_manifest(path: str, content: str) -> Manifest:
         if rid in seen:
             raise ManifestError(f"{path}:{i+1}: duplicate requirement ID: {rid}")
         seen.add(rid)
-        reqs.append(Requirement(id=rid, sentence=cells[1], kind=cells[2],
-                                pointer=cells[3], status=status, file=path, line=i + 1))
+        reqs.append(Requirement(id=rid, sentence=cells[1], why=cells[2], kind=cells[3],
+                                pointer=cells[4], scope=cells[5], status=status,
+                                file=path, line=i + 1))
     for r in reqs:  # backfill so rows before a late header carry the final name
         r.module = module
     return Manifest(module=module, requirements=reqs)

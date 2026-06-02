@@ -78,7 +78,7 @@ class TestRunExitCodes(unittest.TestCase):
 
 class TestRunManifestCoverage(unittest.TestCase):
     INV = "### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n"
-    HEADER = "| 编号 | 规则句子 | 哪类 | 连到哪 | 状态 |\n|--|--|--|--|--|\n"
+    HEADER = "| 编号 | 陈述 | Why | 类型 | 绑定 | scope | 状态 |\n|--|--|--|--|--|--|--|\n"
 
     def test_dormant(self):
         with tempfile.TemporaryDirectory() as d:
@@ -90,25 +90,25 @@ class TestRunManifestCoverage(unittest.TestCase):
             _write(d, self.INV)
             with open(os.path.join(d, "demo_test.go"), "w") as f:
                 f.write("package p\nfunc TestDemo(t *testing.T) {}\n")
-            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 行为·当 | 测试: demo_test.go::TestDemo | enforced |\n")
+            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 测试: demo_test.go::TestDemo | — | enforced |\n")
             self.assertEqual(_run(d), 0)
 
     def test_dangling_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             _write(d, self.INV)
-            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 行为·当 | 测试: demo_test.go::TestGone | enforced |\n")
+            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 测试: demo_test.go::TestGone | — | enforced |\n")
             self.assertEqual(_run(d), 1)
 
     def test_stated_advisory(self):
         with tempfile.TemporaryDirectory() as d:
             _write(d, self.INV)
-            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 行为·当 | 待补 | stated |\n")
+            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 待补 | — | stated |\n")
             self.assertEqual(_run(d), 0)
 
     def test_malformed_is_usage_error(self):
         with tempfile.TemporaryDirectory() as d:
             _write(d, self.INV)
-            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 行为·当 | enforced |\n")
+            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | x | 待补 | event | enforced |\n")
             self.assertEqual(_run(d), 2)
 
 
@@ -170,7 +170,7 @@ class TestDispatch(unittest.TestCase):
 
 
 class TestResolverFlag(unittest.TestCase):
-    HEADER = "| 编号 | 规则句子 | 哪类 | 连到哪 | 状态 |\n|--|--|--|--|--|\n"
+    HEADER = "| 编号 | 陈述 | Why | 类型 | 绑定 | scope | 状态 |\n|--|--|--|--|--|--|--|\n"
 
     def _tree(self, d):
         with open(os.path.join(d, "INVARIANTS.md"), "w") as f:
@@ -178,7 +178,7 @@ class TestResolverFlag(unittest.TestCase):
         md = os.path.join(d, "spec", "demo")
         os.makedirs(md)
         with open(os.path.join(md, "spec.md"), "w") as f:
-            f.write(self.HEADER + "| DEMO-1 | x | 行为·当 | 测试: ghost_test.go::TestX | enforced |\n")
+            f.write(self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 测试: ghost_test.go::TestX | — | enforced |\n")
 
     def test_resolver_binds_what_os_cannot(self):
         with tempfile.TemporaryDirectory() as d:

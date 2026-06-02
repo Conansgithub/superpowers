@@ -1,1 +1,1 @@
-{"exit": 2, "stdout_contains": ["load manifests", "expected 5 columns"]}
+{"exit": 2, "stdout_contains": ["load manifests", "expected 7 columns"]}
