@@ -54,6 +54,12 @@ class TestCheckShape(unittest.TestCase):
         _, warns = check_shape("event", "当 X，SHALL A 且 SHALL B", "测试: a_test.go::T")
         self.assertTrue(any("复合" in w for w in warns))
 
+    def test_has_shall_helper(self):
+        from specanchor.shape import has_shall
+        self.assertTrue(has_shall("服务 SHALL x"))
+        self.assertFalse(has_shall("服务 shall x"))
+        self.assertTrue(has_shall("服务 SHALL NOT x"))
+
 
 if __name__ == "__main__":
     unittest.main()

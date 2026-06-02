@@ -45,3 +45,8 @@ def check_shape(kind, sentence, pointer):
     if len(_SHALL_RE.findall(sentence)) > 1:
         warnings.append("复合 SHALL,疑似两条,应拆")
     return errors, warnings
+
+
+def has_shall(sentence):
+    """True iff the sentence carries the SHALL/SHALL NOT normative verb."""
+    return bool(_SHALL_RE.search(sentence))
