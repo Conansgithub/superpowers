@@ -41,6 +41,15 @@ class TestCheckShape(unittest.TestCase):
         errs, _ = check_shape("gap", "本地账号无测试守护", "gap: 覆盖缺口")
         self.assertEqual(errs, [])
 
+    def test_gap_resolver_todo_prefix_ok(self):
+        errs, _ = check_shape("gap", "go.mod replace 一致性由 CI 脚本验", "resolver-todo: scripts/ci/check.sh")
+        self.assertEqual(errs, [])
+
+    def test_gap_artifact_prefix_ok(self):
+        # artifact: 是设计 §5 的 stated 处置前缀(烟测等工件存在、未接 gate)→ gap-family
+        errs, _ = check_shape("gap", "fork 烟测脚本顺序跑主链路", "artifact: cmd/ops/due-fork-smoketest/main.go")
+        self.assertEqual(errs, [])
+
     def test_gap_pointer_must_be_gap_prefix(self):
         errs, _ = check_shape("gap", "x", "测试: a_test.go::T")
         self.assertTrue(any("指针" in e for e in errs))

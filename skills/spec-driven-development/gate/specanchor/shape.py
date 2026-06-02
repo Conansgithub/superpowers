@@ -6,7 +6,7 @@ KINDS = {"invariant", "event", "unwanted", "contract", "optional", "gap"}
 _SHALL_RE = re.compile(r"\bSHALL(?:\s+NOT)?\b")
 _TEST_PTR_RE = re.compile(r"::[A-Za-z0-9_]+")        # file.<ext>::Func
 _TAG_PTR_RE = re.compile(r"spec:INV-[A-Z]+-\d+")
-_GAP_PREFIX = ("gap:", "resolver-todo:")
+_GAP_PREFIX = ("gap:", "resolver-todo:", "artifact:")
 _WEASEL = ("适当", "合理", "尽快", "友好", "appropriate", "reasonable")
 
 # 句子需 SHALL 的类型(gap 非规则;contract 由工件守)
@@ -37,7 +37,7 @@ def check_shape(kind, sentence, pointer):
             errors.append("contract 指针须指向生成工件(含「生成」)")
     elif kind == "gap":
         if not pointer.startswith(_GAP_PREFIX):
-            errors.append("gap 指针须以 gap:/resolver-todo: 起")
+            errors.append("gap 指针须以 gap:/resolver-todo:/artifact: 起")
 
     # LINT(只印不拦)
     if any(w in sentence for w in _WEASEL):
