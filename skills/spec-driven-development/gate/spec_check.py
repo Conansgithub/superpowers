@@ -47,6 +47,8 @@ def run(argv) -> int:
         return _run_adopt(argv[1:])
     if argv and argv[0] == "init":
         return _run_init(argv[1:])
+    if argv and argv[0] == "audit":
+        return _run_audit(argv[1:])
     if argv and argv[0] == "check":
         argv = argv[1:]
     return _run_check(argv)
@@ -170,6 +172,49 @@ def _run_check(argv) -> int:
         print(f"  DANGLING  {ref_id} referenced at {where} — resolves to no live rule", file=sys.stdout)
     report(sys.stdout, invs, tags, res, cov, req_count, blocking)
     return 1 if blocking else 0
+
+
+def _run_audit(argv) -> int:
+    p = argparse.ArgumentParser(prog="spec-check audit", add_help=True)
+    p.add_argument("-root", default=".")
+    try:
+        a = p.parse_args(argv)
+    except SystemExit:
+        return 2
+    root = a.root
+    try:
+        descriptor = load_descriptor(root)
+    except DescriptorError as e:
+        print(f"spec-check: {e}", file=sys.stderr)
+        return 2
+    cfg = merge({}, descriptor or {})
+    if cfg.lang is None or cfg.lang not in LANGS:
+        print("spec-check: --lang required (no flag and no .spec-check.json lang)", file=sys.stderr)
+        return 2
+    lang = LANGS[cfg.lang]
+    try:
+        inv_path = os.path.join(root, cfg.invariants) if cfg.invariants_from_descriptor else cfg.invariants
+        with open(inv_path, "r", encoding="utf-8", errors="surrogateescape") as f:
+            invs = parse_invariants(f.read())
+        skip = set(_DEFAULT_SKIP)
+        skip.update(cfg.skip)
+        tags = scan_dir(root, [lang.test_suffix], skip)
+        manifests = _load_manifests(root, cfg.manifests)
+    except (OSError, InvariantError, ManifestError) as e:
+        print(f"spec-check: audit load: {e}", file=sys.stderr)
+        return 2
+
+    from specanchor import audit, gitinfo
+    runner = gitinfo.GitRunner(root)
+    git_ok = gitinfo.is_repo(runner)
+    n = sum(len(m.requirements) for m in manifests)
+    stale = audit.staleness(manifests, tags, ext=lang.pointer_ext, root=root,
+                            runner=runner, test_suffix=lang.test_suffix) if git_ok else []
+    aging = audit.stated_aging(manifests, invs, root=root, runner=runner) if git_ok else []
+    dups = audit.dedup(manifests)
+    prose = audit.prose_lint(manifests)
+    print(audit.render(stale, dups, aging, prose, [], n, git_ok))
+    return 0
 
 
 def _load_manifests(root, pattern):
