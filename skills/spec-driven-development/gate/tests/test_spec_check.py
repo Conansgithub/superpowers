@@ -75,6 +75,26 @@ class TestRunExitCodes(unittest.TestCase):
             self.assertEqual(_run(d), 0)
             self.assertEqual(_run(d, "-anchor-strict"), 1)
 
+    def test_shape_block_on_missing_shall(self):
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "### INV-X-1 — x\nStatus: stated\nSince: 2026\n",
+                   "func TestM(t *testing.T){}\n")
+            _write_manifest(d, "m",
+                "| 编号 | 陈述 | Why | 类型 | 绑定 | scope | 状态 |\n|--|--|--|--|--|--|--|\n"
+                "| M-1 | 当 X，服务默认激活 | 防 Z | event | 测试: x_test.go::TestM | — | enforced |\n")
+            self.assertEqual(_run(d, "-manifests", "spec/*/spec.md"), 1)  # block: 缺 SHALL
+
+    def test_emit_index_writes_json(self):
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "### INV-X-1 — x\nStatus: stated\nSince: 2026\n",
+                   "func TestM(t *testing.T){}\n")
+            _write_manifest(d, "m",
+                "| 编号 | 陈述 | Why | 类型 | 绑定 | scope | 状态 |\n|--|--|--|--|--|--|--|\n"
+                "| M-1 | 当 X，服务 SHALL 激活 | 防 Z | event | 测试: x_test.go::TestM | — | enforced |\n")
+            out = os.path.join(d, "idx.json")
+            self.assertEqual(_run(d, "-manifests", "spec/*/spec.md", "--emit-index", out), 0)
+            self.assertTrue(os.path.exists(out))
+
 
 class TestRunManifestCoverage(unittest.TestCase):
     INV = "### INV-RES-1 — x\nStatus: stated\nSince: 2026-06-01\n"
@@ -102,7 +122,7 @@ class TestRunManifestCoverage(unittest.TestCase):
     def test_stated_advisory(self):
         with tempfile.TemporaryDirectory() as d:
             _write(d, self.INV)
-            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 待补 | — | stated |\n")
+            _write_manifest(d, "demo", self.HEADER + "| DEMO-1 | 当 X，API SHALL Y。 | 待补 | event | 测试: demo_test.go::TestDemo | — | stated |\n")
             self.assertEqual(_run(d), 0)
 
     def test_malformed_is_usage_error(self):

@@ -36,6 +36,8 @@ def _build_parser():
                    help="comma-separated extra directory base-names to prune")
     p.add_argument("--resolver", default=None,
                    help="external command resolving coverage bindings (non-code domains)")
+    p.add_argument("--emit-index", dest="emit_index", default=None,
+                   help="write derived spec-index.json to this path")
     return p
 
 
@@ -95,6 +97,7 @@ def _run_check(argv) -> int:
         "anchor_strict": args.anchor_strict,
         "resolver": args.resolver,
         "skip": [s for s in args.skip.split(",") if s] if args.skip else None,
+        "index": args.emit_index,
     }
     cfg = merge(flags, descriptor or {})
 
@@ -141,7 +144,25 @@ def _run_check(argv) -> int:
     except ResolverError as e:
         print(f"spec-check: resolver: {e}", file=sys.stderr)
         return 2
-    blocking = res.blocking() or cov.blocking() or (cfg.anchor_strict and len(res.suspect) > 0)
+    from specanchor.shape import check_shape
+    from specanchor.index import build_index, emit_index
+    shape_errs = []
+    for m in manifests:
+        for req in m.requirements:
+            errs, _ = check_shape(req.kind, req.sentence, req.pointer)
+            for e in errs:
+                shape_errs.append((req.id, req.module, e))
+    shape_block = bool(shape_errs) and cfg.shape_strict == "block"
+
+    if cfg.index:
+        idx_path = os.path.join(root, cfg.index) if cfg.index_from_descriptor else cfg.index
+        emit_index(build_index(manifests, tags, resolver, lang.pointer_ext, root), idx_path)
+
+    blocking = (res.blocking() or cov.blocking() or shape_block
+                or (cfg.anchor_strict and len(res.suspect) > 0))
+    for rid, mod, e in shape_errs:
+        label = "SHAPE" if cfg.shape_strict == "block" else "shape"
+        print(f"  {label:<9} {rid} ({mod}) — {e}", file=sys.stdout)
     report(sys.stdout, invs, tags, res, cov, req_count, blocking)
     return 1 if blocking else 0
 
