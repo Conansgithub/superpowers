@@ -60,6 +60,18 @@ class TestParseInvariants(unittest.TestCase):
         self.assertEqual(got[0].holds, want)
         self.assertEqual(got[0].anchor, "1a2b3c4")
 
+    def test_parses_guarded_by_manifest_id(self):
+        from specanchor.invariant import parse_invariants
+        md = ("### INV-X-1\nHolds: foo SHALL bar\nWhy: w\n"
+              "Guarded by: AUTH-3\nStatus: enforced\nSince: 2026-06-02\n")
+        inv = parse_invariants(md)[0]
+        self.assertEqual(inv.guarded_by, "AUTH-3")
+
+    def test_guarded_by_defaults_empty(self):
+        from specanchor.invariant import parse_invariants
+        md = "### INV-Y-1\nHolds: a SHALL b\nStatus: stated\n"
+        self.assertEqual(parse_invariants(md)[0].guarded_by, "")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,7 @@ class Invariant:
     since: str = ""
     holds: str = ""   # normalized Holds block text — drives B4
     anchor: str = ""  # optional fingerprint (hex, "sha-" stripped, lowercased)
+    guarded_by: str = ""  # raw "Guarded by:" value: manifest-ID ref / test::Func / —
 
 
 _HEADER_RE = re.compile(r"^###\s+(INV-[A-Z]+-\d+)\b")
@@ -24,6 +25,7 @@ _STATUS_RE = re.compile(r"^Status:\s*(stated|enforced|violated)$")
 _SINCE_RE = re.compile(r"^Since:\s*(.+?)$")
 _HOLDS_RE = re.compile(r"^Holds:\s*(.*)$")
 _ANCHOR_RE = re.compile(r"^Anchor:\s*(?:sha-)?([0-9a-fA-F]+)\s*$")
+_GUARDED_RE = re.compile(r"^Guarded by:\s*(.+?)\s*$")
 # Lines that terminate a Holds block. Holds itself is the block start, so absent.
 _FIELD_START_RE = re.compile(r"^(Why|Guarded by|Anchor|Status|Since):")
 
@@ -80,6 +82,9 @@ def parse_invariants(md: str):
         m = _SINCE_RE.match(line)
         if m:
             cur.since = m.group(1)
+        m = _GUARDED_RE.match(line)
+        if m:
+            cur.guarded_by = m.group(1)
     flush()
 
     seen = set()
