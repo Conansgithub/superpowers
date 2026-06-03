@@ -1,10 +1,24 @@
 import hashlib
 import json
+import os
 from collections import defaultdict
 
 from .binding import classify_pointer, BindingKind
 from .scope import resolve_scope
 from .shape import check_shape, has_shall
+
+
+def _rel_at(path, root, line):
+    """归一为干净仓相对 file:line：去掉 root 前缀、./ 前缀，统一正斜杠。"""
+    try:
+        rel = os.path.relpath(path, root)
+    except ValueError:
+        # cross-drive paths (Windows): no sensible relative form, at least normalize separators
+        rel = path.replace(os.sep, "/")
+    rel = rel.replace(os.sep, "/")
+    if rel.startswith("./"):
+        rel = rel[2:]
+    return f"{rel}:{line}"
 
 
 def _binding(req, tags, resolver, ext):
@@ -44,7 +58,7 @@ def build_index(manifests, tags, resolver, ext, root):
                 "binding": binding, "scope": scope,
                 "shape": {"has_shall": has_shall(req.sentence),
                           "errors": errs, "lint_warnings": warns},
-                "at": f"{req.file}:{req.line}",
+                "at": _rel_at(req.file, root, req.line),
             }
             rules.append(row)
             for f in scope["files"]:
