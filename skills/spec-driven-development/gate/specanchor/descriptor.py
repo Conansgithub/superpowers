@@ -5,7 +5,7 @@ from typing import Optional
 
 DESCRIPTOR_NAME = ".spec-check.json"
 _KEYS = {"lang", "invariants", "manifests", "skip", "anchor_strict", "resolver",
-         "index", "shape_strict"}
+         "index", "shape_strict", "contracts"}
 
 
 class DescriptorError(Exception):
@@ -34,7 +34,7 @@ def load_descriptor(root):
 
 
 def _typecheck(path, data):
-    for k in ("lang", "invariants", "manifests", "resolver", "index"):
+    for k in ("lang", "invariants", "manifests", "resolver", "index", "contracts"):
         if k in data and data[k] is not None and not isinstance(data[k], str):
             raise DescriptorError(f"{path}: {k} must be a string")
     if data.get("index") == "":
@@ -58,6 +58,7 @@ _DEFAULTS = {
     "resolver": None,
     "index": None,
     "shape_strict": "block",
+    "contracts": None,
 }
 
 
@@ -73,6 +74,8 @@ class ResolvedConfig:
     index: Optional[str]
     index_from_descriptor: bool
     shape_strict: str
+    contracts: Optional[str]
+    contracts_from_descriptor: bool
 
 
 def merge(flags, descriptor):
@@ -98,6 +101,8 @@ def merge(flags, descriptor):
     skip, _ = pick("skip")
     index, index_from_desc = pick("index")
     shape_strict, _ = pick("shape_strict")
+    contracts, contracts_from_desc = pick("contracts")
     return ResolvedConfig(lang, invariants, manifests, list(skip),
                           bool(anchor_strict), resolver, inv_from_desc,
-                          index, index_from_desc, str(shape_strict))
+                          index, index_from_desc, str(shape_strict),
+                          contracts, contracts_from_desc)
