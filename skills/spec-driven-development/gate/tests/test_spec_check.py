@@ -214,5 +214,56 @@ class TestResolverFlag(unittest.TestCase):
                 ["--lang", "go", "-invariants", inv, "-root", d, "--resolver", f"sh {script}"]), 0)
 
 
+class TestDeclarativeResolver(unittest.TestCase):
+    """Tests that DeclarativeResolver is engaged when contracts are configured,
+    distinguished from OSResolver by a NEGATIVE case: x.yaml exists (OSResolver
+    would return True) but its content does NOT satisfy the contract (DeclarativeResolver
+    returns False → UNBOUND → gate FAIL, rc=1).
+    """
+    HEADER = "| 编号 | 陈述 | Why | 类型 | 绑定 | scope | 状态 |\n|--|--|--|--|--|--|--|\n"
+
+    def _build_tree(self, d, yaml_content):
+        """Build a temp project using descriptor-driven config (no explicit flags)."""
+        # .spec-check.json descriptor
+        with open(os.path.join(d, ".spec-check.json"), "w") as f:
+            json.dump({
+                "lang": "go",
+                "invariants": "INV.md",
+                "manifests": "spec/*.md",
+                "contracts": "contracts.json",
+            }, f)
+        # INV.md
+        with open(os.path.join(d, "INV.md"), "w") as f:
+            f.write("# INV\n")
+        # spec/m.md — one enforced CONTRACT pointer
+        os.makedirs(os.path.join(d, "spec"), exist_ok=True)
+        with open(os.path.join(d, "spec", "m.md"), "w") as f:
+            f.write(
+                self.HEADER +
+                "| M-1 | cfg SHALL 含 key | w | contract | 生成: x.yaml | — | enforced |\n"
+            )
+        # x.yaml — content controlled by caller
+        with open(os.path.join(d, "x.yaml"), "w") as f:
+            f.write(yaml_content)
+        # contracts.json — requires "key: val" in x.yaml
+        with open(os.path.join(d, "contracts.json"), "w") as f:
+            json.dump({"x.yaml": [{"type": "contains", "files": ["x.yaml"], "all": ["key: val"]}]}, f)
+
+    def test_contract_not_satisfied_blocks(self):
+        """x.yaml exists but lacks 'key: val' → DeclarativeResolver False → UNBOUND → rc=1.
+        If OSResolver were used instead, it would see the file exists and return True → rc=0.
+        This test distinguishes the two resolvers.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            self._build_tree(d, "other: 1\n")
+            self.assertEqual(spec_check.run(["-root", d]), 1)
+
+    def test_contract_satisfied_passes(self):
+        """x.yaml contains 'key: val' → DeclarativeResolver True → bound → rc=0."""
+        with tempfile.TemporaryDirectory() as d:
+            self._build_tree(d, "key: val\n")
+            self.assertEqual(spec_check.run(["-root", d]), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

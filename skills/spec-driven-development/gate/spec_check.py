@@ -13,7 +13,8 @@ from specanchor.tags import scan_dir
 from specanchor.manifest import parse_manifest, ManifestError
 from specanchor.check import check
 from specanchor.coverage import coverage
-from specanchor.binding import OSResolver, ShellResolver, ResolverError
+from specanchor.binding import OSResolver, ShellResolver, DeclarativeResolver, ResolverError
+from specanchor.contracts import load_contracts, ContractError
 from specanchor.refs import dangling
 from specanchor.langs import LANGS
 from specanchor.descriptor import load_descriptor, merge, DescriptorError
@@ -39,6 +40,8 @@ def _build_parser():
                    help="external command resolving coverage bindings (non-code domains)")
     p.add_argument("--emit-index", dest="emit_index", default=None,
                    help="write derived spec-index.json to this path")
+    p.add_argument("--contracts", default=None,
+                   help="declarative contracts file (non-code domains); resolves CONTRACT pointers")
     return p
 
 
@@ -101,6 +104,7 @@ def _run_check(argv) -> int:
         "resolver": args.resolver,
         "skip": [s for s in args.skip.split(",") if s] if args.skip else None,
         "index": args.emit_index,
+        "contracts": args.contracts,
     }
     cfg = merge(flags, descriptor or {})
 
@@ -140,7 +144,18 @@ def _run_check(argv) -> int:
         return 2
     req_count = sum(len(m.requirements) for m in manifests)
 
-    resolver = ShellResolver(cfg.resolver, root) if cfg.resolver else OSResolver(root, lang)
+    if cfg.resolver:
+        resolver = ShellResolver(cfg.resolver, root)
+    elif cfg.contracts:
+        contracts_path = os.path.join(root, cfg.contracts) if cfg.contracts_from_descriptor else cfg.contracts
+        try:
+            contracts = load_contracts(contracts_path)
+        except ContractError as e:
+            print(f"spec-check: {e}", file=sys.stderr)
+            return 2
+        resolver = DeclarativeResolver(root, lang, contracts)
+    else:
+        resolver = OSResolver(root, lang)
     res = check(invs, tags)
     try:
         cov = coverage(manifests, tags, resolver, lang.pointer_ext)
