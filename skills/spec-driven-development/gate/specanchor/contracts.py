@@ -35,6 +35,9 @@ def _validate(path, selector, a):
     if t == "contains":
         if not isinstance(a.get("files"), list) or not a["files"]:
             raise ContractError(f"{path}: {selector!r} contains needs non-empty 'files'")
+        for key in ("all", "none"):
+            if key in a and not isinstance(a[key], list):
+                raise ContractError(f"{path}: {selector!r} contains '{key}' must be a list")
         if not a.get("all") and not a.get("none"):
             raise ContractError(f"{path}: {selector!r} contains needs 'all' or 'none'")
     elif t == "exec":
@@ -80,7 +83,7 @@ def _eval_contains(a, root):
 def _eval_exec(a, root):
     argv = [a["cmd"]] + list(a.get("args", []))
     try:
-        proc = subprocess.run(argv, cwd=root)
+        proc = subprocess.run(argv, cwd=root, capture_output=True)
     except OSError:
         return False
     return proc.returncode == 0

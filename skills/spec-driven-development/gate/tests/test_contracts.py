@@ -54,6 +54,11 @@ class TestContracts(unittest.TestCase):
         with self.assertRaises(ContractError):
             load_contracts(os.path.join(root, "c.json"))
 
+    def test_load_rejects_non_list_all(self):
+        root = self._root({"c.json": '{"sel": [{"type": "contains", "files": ["x"], "all": "foo"}]}'})
+        with self.assertRaises(ContractError):
+            load_contracts(os.path.join(root, "c.json"))
+
     def test_load_roundtrip(self):
         root = self._root({"c.json": '{"sel": [{"type": "exists", "paths": ["x"]}]}'})
         c = load_contracts(os.path.join(root, "c.json"))
