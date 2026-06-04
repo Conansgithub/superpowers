@@ -100,7 +100,6 @@ class TestMerge(unittest.TestCase):
         self.assertEqual(cfg.index, "out.json")
         self.assertTrue(cfg.index_from_descriptor)
 
-
     def test_contracts_key_accepted_and_typed(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".spec-check.json"), "w") as f:
@@ -114,6 +113,13 @@ class TestMerge(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".spec-check.json"), "w") as f:
                 json.dump({"contracts": 123}, f)
+            with self.assertRaises(DescriptorError):
+                load_descriptor(d)
+
+    def test_contracts_empty_string_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"contracts": ""}, f)
             with self.assertRaises(DescriptorError):
                 load_descriptor(d)
 

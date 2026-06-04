@@ -39,6 +39,8 @@ def _typecheck(path, data):
             raise DescriptorError(f"{path}: {k} must be a string")
     if data.get("index") == "":
         raise DescriptorError(f"{path}: index must be a non-empty string or omitted")
+    if data.get("contracts") == "":
+        raise DescriptorError(f"{path}: contracts must be a non-empty string or omitted")
     if "anchor_strict" in data and not isinstance(data["anchor_strict"], bool):
         raise DescriptorError(f"{path}: anchor_strict must be a boolean")
     if "skip" in data:
