@@ -109,7 +109,6 @@ class DeclarativeResolver:
 
     def __init__(self, root, lang, contracts):
         self._os = OSResolver(root, lang)
-        self._root = root
         self._contracts = contracts
 
     def test_func_exists(self, file: str, fn: str) -> bool:
@@ -117,5 +116,5 @@ class DeclarativeResolver:
 
     def artifact_exists(self, path: str) -> bool:
         if path in self._contracts:
-            return eval_contract(self._contracts[path], self._root)
+            return eval_contract(self._contracts[path], self._os.root)
         return self._os.artifact_exists(path)

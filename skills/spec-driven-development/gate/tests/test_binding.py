@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import unittest
 from specanchor.binding import classify_pointer, BindingKind, OSResolver, ShellResolver, DeclarativeResolver
@@ -58,9 +59,12 @@ class TestShellResolver(unittest.TestCase):
 class TestDeclarativeResolver(unittest.TestCase):
     def _root(self, files):
         d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, ignore_errors=True)
         for n, c in files.items():
-            p = os.path.join(d, n); os.makedirs(os.path.dirname(p), exist_ok=True)
-            open(p, "w").write(c)
+            p = os.path.join(d, n)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w") as fh:
+                fh.write(c)
         return d
 
     def test_test_verb_delegates_to_os(self):
