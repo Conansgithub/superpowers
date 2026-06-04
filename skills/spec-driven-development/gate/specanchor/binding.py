@@ -5,6 +5,8 @@ import subprocess
 from enum import Enum
 from typing import Protocol
 
+from .contracts import eval_contract
+
 
 class BindingKind(Enum):
     NONE = 0
@@ -99,3 +101,21 @@ class ShellResolver:
 
     def artifact_exists(self, path: str) -> bool:
         return self._ok("artifact", path)
+
+
+class DeclarativeResolver:
+    """test → 委托现有 OSResolver（185 条 TEST 绑定零分歧）；artifact → 已登记 selector
+    跑声明式契约，未登记则回退 OSResolver 文件存在性（保现存 contract 行不破）。"""
+
+    def __init__(self, root, lang, contracts):
+        self._os = OSResolver(root, lang)
+        self._root = root
+        self._contracts = contracts
+
+    def test_func_exists(self, file: str, fn: str) -> bool:
+        return self._os.test_func_exists(file, fn)
+
+    def artifact_exists(self, path: str) -> bool:
+        if path in self._contracts:
+            return eval_contract(self._contracts[path], self._root)
+        return self._os.artifact_exists(path)

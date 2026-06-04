@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-from specanchor.binding import classify_pointer, BindingKind, OSResolver, ShellResolver
+from specanchor.binding import classify_pointer, BindingKind, OSResolver, ShellResolver, DeclarativeResolver
 from specanchor.langs import LANGS
 
 
@@ -53,6 +53,33 @@ class TestShellResolver(unittest.TestCase):
             self.assertFalse(r.test_func_exists("a.go", "Nope"))
             self.assertTrue(r.artifact_exists("ok.json"))
             self.assertFalse(r.artifact_exists("no.json"))
+
+
+class TestDeclarativeResolver(unittest.TestCase):
+    def _root(self, files):
+        d = tempfile.mkdtemp()
+        for n, c in files.items():
+            p = os.path.join(d, n); os.makedirs(os.path.dirname(p), exist_ok=True)
+            open(p, "w").write(c)
+        return d
+
+    def test_test_verb_delegates_to_os(self):
+        root = self._root({"a_test.go": "func TestFoo(t *testing.T){}\n"})
+        r = DeclarativeResolver(root, LANGS["go"], {})
+        self.assertTrue(r.test_func_exists("a_test.go", "TestFoo"))
+        self.assertFalse(r.test_func_exists("a_test.go", "Missing"))
+
+    def test_artifact_known_selector_runs_contract(self):
+        root = self._root({"x.yaml": "key: val\n"})
+        c = {"sel.check": [{"type": "contains", "files": ["x.yaml"], "all": ["key: val"]}]}
+        r = DeclarativeResolver(root, LANGS["go"], c)
+        self.assertTrue(r.artifact_exists("sel.check"))
+
+    def test_artifact_unknown_selector_falls_back_to_existence(self):
+        root = self._root({"real.txt": "hi\n"})
+        r = DeclarativeResolver(root, LANGS["go"], {})
+        self.assertTrue(r.artifact_exists("real.txt"))
+        self.assertFalse(r.artifact_exists("nope.txt"))
 
 
 if __name__ == "__main__":
