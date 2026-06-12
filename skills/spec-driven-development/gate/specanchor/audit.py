@@ -108,7 +108,57 @@ def ledger_ref(ledger_text, live_ids):
     return out
 
 
-def render(stale, dups, aging, prose, ledger, n_rows, git_ok):
+# ── 裸引用审计 (bare-refs) ────────────────────────────────────────────────────
+# 裸方法论 token: INV-[A-Z]+-\d+ 或 spec:[A-Z][A-Z0-9-]+ 出现在文件中,
+# 但既不在 spec:INV-X 绑定标签 (gate _TAG_RE 解析的真实 anchor)、也不在 [[ref:...]] 内的位置。
+# 默认关闭 (--audit-bare-refs 才激活)、只打印不改退出码。
+_BARE_INV_RE  = re.compile(r"\bINV-[A-Z][A-Z0-9]*-\d+\b")
+_BARE_SPEC_RE = re.compile(r"\bspec:([A-Z][A-Z0-9-]+-\d+[a-z]?)\b")
+# 绑定标签 — gate _TAG_RE 识别 spec:INV-X 出现在任意位置(不限行首)，审计同步
+_BINDING_ANCHOR_RE = re.compile(r"\bspec:INV-[A-Z][A-Z0-9]*-\d+\b")
+# [[ref:...]] 段: 匹配 [[ref: 后面直到第一个 ]]
+_REF_BLOCK_RE = re.compile(r"\[\[ref:[^\]]*\]\]")
+
+_BARE_REFS_TEXT_EXTS = {
+    ".go", ".md", ".yaml", ".yml", ".sh", ".sql", ".toml", ".json", ".ts", ".tsx",
+}
+_BARE_REFS_SKIP_DIRS = {".git", "node_modules", "vendor", "testdata", "conformance",
+                        "__pycache__", "dist", ".serena", ".codegraph"}
+
+
+def bare_refs(root: str, extra_skip=None):
+    """扫 root 下所有文本文件，找裸方法论 token（既非绑定标签、又非 [[ref:]] 内）。
+    返回 [(file, lineno, token)] 列表。默认关闭、不改退出码。
+    """
+    skip = _BARE_REFS_SKIP_DIRS | (extra_skip or set())
+    findings = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in skip)
+        for fname in sorted(filenames):
+            _, ext = os.path.splitext(fname)
+            if ext not in _BARE_REFS_TEXT_EXTS:
+                continue
+            path = os.path.join(dirpath, fname)
+            try:
+                with open(path, "r", encoding="utf-8", errors="surrogateescape") as f:
+                    lines = f.read().split("\n")
+            except OSError:
+                continue
+            for lineno, line in enumerate(lines, 1):
+                # 从行中抹去：① [[ref:...]] 段；② spec:INV-X 绑定标签（任意位置）
+                # 剩余内容中出现的 INV-X 或 spec:MODULE-X 才是裸引用
+                cleaned = _REF_BLOCK_RE.sub("", line)
+                cleaned = _BINDING_ANCHOR_RE.sub("", cleaned)
+                # 查 INV- 裸引用
+                for m in _BARE_INV_RE.finditer(cleaned):
+                    findings.append((path, lineno, m.group(0)))
+                # 查 spec:MODULE-ID 裸引用（INV- 前缀已在上步被抹去，不会重复）
+                for m in _BARE_SPEC_RE.finditer(cleaned):
+                    findings.append((path, lineno, "spec:" + m.group(1)))
+    return findings
+
+
+def render(stale, dups, aging, prose, ledger, n_rows, git_ok, bare=None):
     L = [f"spec-check audit: {n_rows} rows scanned (git: {'ok' if git_ok else 'unavailable'})"]
     if stale:
         L.append(f"STALE ({len(stale)}):")
@@ -126,6 +176,13 @@ def render(stale, dups, aging, prose, ledger, n_rows, git_ok):
     if ledger:
         L.append(f"LEDGER-REF? ({len(ledger)}):")
         L += [f"  {i} @ ledger:{ln} 可能悬空" for i, ln in ledger]
+    if bare is not None:
+        if bare:
+            L.append(f"BARE-REFS ({len(bare)}) -- 裸方法论 token, 建议包进 [[ref:...]]:")
+            for fpath, lno, tok in bare:
+                L.append(f"  {fpath}:{lno}: {tok}")
+        else:
+            L.append("BARE-REFS: 0 — 全部已包裹 ✓")
     total = len(stale) + len(aged) + len(dups) + len(prose) + len(ledger)
     L.append(f"audit: {total} findings (advisory — 不阻断)")
     return "\n".join(L)

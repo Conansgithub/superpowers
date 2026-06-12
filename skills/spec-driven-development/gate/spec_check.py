@@ -192,6 +192,10 @@ def _run_check(argv) -> int:
 def _run_audit(argv) -> int:
     p = argparse.ArgumentParser(prog="spec-check audit", add_help=True)
     p.add_argument("-root", default=".")
+    p.add_argument("--audit-bare-refs", dest="audit_bare_refs", action="store_true",
+                   default=False,
+                   help="扫描裸方法论 token (INV-/spec:MODULE-ID)，即未包进 // spec: 或 [[ref:]] 的位置；"
+                        "只打印、不改退出码 (advisory)")
     try:
         a = p.parse_args(argv)
     except SystemExit:
@@ -228,7 +232,8 @@ def _run_audit(argv) -> int:
     aging = audit.stated_aging(manifests, invs, root=root, runner=runner) if git_ok else []
     dups = audit.dedup(manifests)
     prose = audit.prose_lint(manifests)
-    print(audit.render(stale, dups, aging, prose, [], n, git_ok))
+    bare = audit.bare_refs(root) if a.audit_bare_refs else None
+    print(audit.render(stale, dups, aging, prose, [], n, git_ok, bare=bare))
     return 0
 
 
