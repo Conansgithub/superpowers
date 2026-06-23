@@ -1,5 +1,16 @@
 # Superpowers Release Notes
 
+## v6.1.0 (fork: Conansgithub/superpowers)
+
+Fork sync — merges upstream `obra/superpowers` v6.0.3 into our fork, on top of the
+`spec-driven-development` gate engine (spec-as-AI-memory: invariants/manifests,
+`DeclarativeResolver`, contracts). The merge was clean apart from version metadata;
+the four workflow-seam skills (`brainstorming`, `writing-plans`,
+`test-driven-development`, `finishing-a-development-branch`) auto-merged with our
+`spec-weave` blocks preserved. Verified: gate self-suite (19/19 conformance) and the
+gate run against a real consumer both green. Version bumped to 6.1.0 to refresh the
+directory-marketplace cache.
+
 ## v6.0.3 (2026-06-18)
 
 ### Subagent-Driven Development
