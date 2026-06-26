@@ -20,7 +20,7 @@ class Invariant:
     guarded_by: str = ""  # raw "Guarded by:" value: manifest-ID ref / test::Func / —
 
 
-_HEADER_RE = re.compile(r"^###\s+(INV-[A-Z]+-\d+)\b")
+_HEADER_RE = re.compile(r"^###\s+(INV-[A-Z]+(?:-[A-Z]+)*-\d+)\b")
 _STATUS_RE = re.compile(r"^Status:\s*(stated|enforced|violated)$")
 _SINCE_RE = re.compile(r"^Since:\s*(.+?)$")
 _HOLDS_RE = re.compile(r"^Holds:\s*(.*)$")

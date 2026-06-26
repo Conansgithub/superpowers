@@ -11,7 +11,7 @@ class TagRef:
     anchor: str = ""
 
 
-_TAG_RE = re.compile(r"spec:(INV-[A-Z]+-\d+)(?:\s+anchor:(?:sha-)?([0-9a-fA-F]+))?")
+_TAG_RE = re.compile(r"spec:(INV-[A-Z]+(?:-[A-Z]+)*-\d+)(?:\s+anchor:(?:sha-)?([0-9a-fA-F]+))?")
 
 
 def extract_tags(file: str, content: str):
