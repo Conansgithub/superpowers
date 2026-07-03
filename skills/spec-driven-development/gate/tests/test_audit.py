@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 from specanchor.manifest import Manifest, Requirement
 from specanchor.invariant import Invariant
@@ -54,6 +56,18 @@ class TestStaleness(unittest.TestCase):
         out = audit.staleness([m], tags=[], root="/x",
                               runner=FakeRunner(since_out="abc\n"), test_suffix="_test.go", ext=".go")
         self.assertEqual(out, [])
+
+    def test_unscoped_rows_do_not_infer_package_wide_watch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "pkg"))
+            with open(os.path.join(tmp, "pkg", "a_test.go"), "w", encoding="utf-8") as f:
+                f.write("package pkg\n")
+            with open(os.path.join(tmp, "pkg", "service.go"), "w", encoding="utf-8") as f:
+                f.write("package pkg\n")
+            m = Manifest("m", [_req("A-1", scope="—")])
+            out = audit.staleness([m], tags=[], root=tmp,
+                                  runner=FakeRunner(since_out="abc\n"), test_suffix="_test.go", ext=".go")
+            self.assertEqual(out, [])
 
 
 if __name__ == "__main__":

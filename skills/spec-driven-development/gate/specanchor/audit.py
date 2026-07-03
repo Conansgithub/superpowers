@@ -1,11 +1,9 @@
 import os
 import re
-import glob as _glob
 import fnmatch
 from collections import defaultdict
 from datetime import date
 from . import gitinfo
-from .binding import classify_pointer, BindingKind
 
 _VAGUE = ("等", "诸如", "可能", "通常", "一般", "若干", "尽量", "适当")
 _LONG = 120
@@ -13,18 +11,12 @@ _LONG = 120
 
 def _watched_files(req, tagfile, ext, test_suffix, root):
     """规则盯哪些生产文件(相对 root 的路径,喂 git -- )。
-    显式 scope → glob 字面串(git 自解析,稀少且简单);
-    否则窄取绑定测试所在包的生产文件(python glob,去 *_test 后的具体文件)。"""
+    显式 scope → glob 字面串(git 自解析,稀少且简单)。
+    无显式 scope 不推断 package-wide 生产文件;否则一个测试绑定会把整包变更都报 stale。"""
     cell = (req.scope or "").strip()
     if cell and cell != "—":
         return [g.split("::", 1)[0].strip() for g in cell.split(",") if g.strip()]
-    kind, a1, a2 = classify_pointer(req.pointer, ext)
-    test_path = a1 if kind == BindingKind.TEST else (tagfile.get(a1) if kind == BindingKind.TAG else None)
-    if not test_path:
-        return []
-    d = os.path.dirname(os.path.join(root, test_path))
-    return [os.path.relpath(p, root) for p in sorted(_glob.glob(f"{d}/*{ext}"))
-            if not p.endswith(test_suffix)]
+    return []
 
 
 def staleness(manifests, tags, resolver=None, ext=".go", root=".", runner=None, test_suffix="_test.go"):
@@ -116,7 +108,7 @@ def ledger_ref(ledger_text, live_ids):
 _BARE_INV_RE  = re.compile(r"\bINV-[A-Z][A-Z0-9]*-\d+\b")
 _BARE_SPEC_RE = re.compile(r"\bspec:([A-Z][A-Z0-9-]+-\d+[a-z]?)\b")
 # 绑定标签 — gate _TAG_RE 识别 spec:INV-X 出现在任意位置(不限行首)，审计同步
-_BINDING_ANCHOR_RE = re.compile(r"\bspec:INV-[A-Z][A-Z0-9]*-\d+\b")
+_BINDING_ANCHOR_RE = re.compile(r"\bspec:INV-[A-Z]+(?:-[A-Z]+)*-\d+\b")
 # [[ref:...]] 段: 匹配 [[ref: 后面直到第一个 ]]
 _REF_BLOCK_RE = re.compile(r"\[\[ref:[^\]]*\]\]")
 

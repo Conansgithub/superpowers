@@ -23,6 +23,14 @@ class TestBareRefsBinding(unittest.TestCase):
             tokens = [tok for _, _, tok in got]
             self.assertNotIn("INV-LEDGER-1", tokens)
 
+    def test_multi_segment_binding_tag_not_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write(tmp, "pkg/x_test.go",
+                   "// spec:INV-PLAYGROUND-FM-2 — force materialize\n"
+                   "// spec:INV-ATTR-CONSISTENCY-1 — snapshot consistency\n")
+            got = bare_refs(tmp)
+            self.assertEqual(got, [])
+
     def test_inline_binding_tag_not_reported(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write(tmp, "a_test.go",
