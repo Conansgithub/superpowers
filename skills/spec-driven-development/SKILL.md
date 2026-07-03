@@ -8,11 +8,19 @@ description: Use at the five workflow seams (brainstorm, plan, TDD, verification
 Keep specs from drifting from code. Every rule lives in the least-rot-prone form for its kind, and a gate fails when a rule and its proof come unlinked.
 
 Three kinds of rule, three drift-resistant homes:
-- **invariant** (always true) → a line in `INVARIANTS.md` + a property test + a `// spec:ID` tag + a fingerprint check.
+- **invariant** (always true) → a line in `INVARIANTS.md` + a property test + a `// spec:INV-*` binding tag + a fingerprint check.
 - **behavior** (one scenario) → one given/when/then test; the sentence and the test are the same artifact (no tag).
 - **contract** (interface shape) → a generated file (e.g. OpenAPI), regenerated and diffed; never tagged.
 
 Full format in `references/`: `invariants-template.md`, `manifest-template.md`, `ears-sentences.md`, `gate-contract.md`.
+
+## Marker Convention
+
+Two marker types are intentionally separate:
+- **Binding tag:** `// spec:INV-*` appears in test files only and is parsed by the gate as invariant proof. Do not use `spec:MODULE-ID` as a prose marker.
+- **Prose reference:** `[[ref:...]]` appears in production source, docs, SQL, YAML, or swagger comments to explain design context. It may reference invariants or module rules, but it is not proof.
+
+When adding explanatory comments outside tests, use `[[ref:ID]]`, not bare `INV-*` and not `spec:MODULE-ID`.
 
 This skill is woven into five upstream skills; each runs one procedure below at its seam.
 
@@ -44,9 +52,22 @@ Otherwise pass them explicitly (`--lang` is required; precedence is flag > descr
 
 `$SKILL_DIR` is this skill's own directory. For a non-code domain, add a `langs.py` row and pass `--resolver <cmd>` (it answers `test <file> <fn>` / `artifact <path>` by exit code). **Enforcement lives here at the seam, not in CI.**
 
+If manual inspection is needed, mirror the gate's sources in this order:
+1. `INVARIANTS.md` and `spec/*/spec.md`
+2. derived `spec-index.json`
+3. the binding target (`file::Func`, `// spec:INV-*` test, or generated artifact)
+4. `spec_check.py` / contracts-check output
+
+Do not substitute broad grep, Codegraph, or generated bundle searches for gate evidence. For generated or vendored noise, declare descriptor `exclude_globs` (e.g. `cmd/*/docs/**`, `cmd/cockpit-api/dist/**`, `internal/docsportal/assets/**`) and re-run the gate/audit.
+
 ## Procedure 5 · Reconcile
 **Seam:** start of `finishing-a-development-branch`, before merge/PR.
 Read the ACTUAL slice diff + tests (never the plan). For each touched rule: if a green test now guards it, add the tag and flip `stated → enforced`. Add rules the slice revealed. If shipped code contradicts a rule, set `Status: violated` and STOP (release blocker). Update `Guarded by:`, `Since:`, and fingerprints. Re-run the gate (Procedure 4); it must be green before merge.
+
+Before flipping a rule to `enforced`, verify `rule ⊆ proof`:
+- every claim in the sentence is covered by the bound test or contract;
+- if the proof covers less, narrow the sentence instead of over-claiming;
+- if the rule changed category/status, regenerate derived indexes and update index consumers/tests.
 
 ## Integration
 Invoked at five seams, each via a `spec-weave` pointer block in the host skill:

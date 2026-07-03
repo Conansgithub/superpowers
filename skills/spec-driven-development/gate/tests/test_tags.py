@@ -51,6 +51,16 @@ class TestScanDir(unittest.TestCase):
             self.assertEqual(len(got), 1)
             self.assertEqual(got[0].id, "INV-LEDGER-1")
 
+    def test_exclude_globs_prune_generated_files(self):
+        with tempfile.TemporaryDirectory() as root:
+            with open(os.path.join(root, "a_test.go"), "w") as f:
+                f.write("// spec:INV-LEDGER-1\n")
+            os.makedirs(os.path.join(root, "cmd", "api", "docs"))
+            with open(os.path.join(root, "cmd", "api", "docs", "swagger_test.go"), "w") as f:
+                f.write("// spec:INV-GENERATED-1\n")
+            got = scan_dir(root, ["_test.go"], set(), ["cmd/*/docs/**"])
+            self.assertEqual([t.id for t in got], ["INV-LEDGER-1"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -132,7 +132,7 @@ def _run_check(argv) -> int:
     skip = set(_DEFAULT_SKIP)
     skip.update(cfg.skip)
     try:
-        tags = scan_dir(root, [lang.test_suffix], skip)
+        tags = scan_dir(root, [lang.test_suffix], skip, cfg.exclude_globs)
     except OSError as e:
         print(f"spec-check: scan tags: {e}", file=sys.stderr)
         return 2
@@ -217,7 +217,7 @@ def _run_audit(argv) -> int:
             invs = parse_invariants(f.read())
         skip = set(_DEFAULT_SKIP)
         skip.update(cfg.skip)
-        tags = scan_dir(root, [lang.test_suffix], skip)
+        tags = scan_dir(root, [lang.test_suffix], skip, cfg.exclude_globs)
         manifests = _load_manifests(root, cfg.manifests)
     except (OSError, InvariantError, ManifestError) as e:
         print(f"spec-check: audit load: {e}", file=sys.stderr)
@@ -232,7 +232,7 @@ def _run_audit(argv) -> int:
     aging = audit.stated_aging(manifests, invs, root=root, runner=runner) if git_ok else []
     dups = audit.dedup(manifests)
     prose = audit.prose_lint(manifests)
-    bare = audit.bare_refs(root) if a.audit_bare_refs else None
+    bare = audit.bare_refs(root, exclude_globs=cfg.exclude_globs) if a.audit_bare_refs else None
     print(audit.render(stale, dups, aging, prose, [], n, git_ok, bare=bare))
     return 0
 

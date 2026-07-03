@@ -16,6 +16,13 @@ class TestLoadDescriptor(unittest.TestCase):
                 json.dump({"lang": "go", "skip": ["a"]}, f)
             self.assertEqual(load_descriptor(d), {"lang": "go", "skip": ["a"]})
 
+    def test_exclude_globs_valid(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"lang": "go", "exclude_globs": ["dist/**", "cmd/*/docs/**"]}, f)
+            self.assertEqual(load_descriptor(d),
+                             {"lang": "go", "exclude_globs": ["dist/**", "cmd/*/docs/**"]})
+
     def test_malformed_json(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".spec-check.json"), "w") as f:
@@ -34,6 +41,13 @@ class TestLoadDescriptor(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".spec-check.json"), "w") as f:
                 json.dump({"skip": "notalist"}, f)
+            with self.assertRaises(DescriptorError):
+                load_descriptor(d)
+
+    def test_exclude_globs_must_be_list_of_strings(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".spec-check.json"), "w") as f:
+                json.dump({"exclude_globs": "dist/**"}, f)
             with self.assertRaises(DescriptorError):
                 load_descriptor(d)
 
@@ -81,6 +95,10 @@ class TestMerge(unittest.TestCase):
     def test_skip_from_descriptor(self):
         cfg = merge({}, {"skip": ["x", "y"]})
         self.assertEqual(cfg.skip, ["x", "y"])
+
+    def test_exclude_globs_from_descriptor(self):
+        cfg = merge({}, {"exclude_globs": ["dist/**"]})
+        self.assertEqual(cfg.exclude_globs, ["dist/**"])
 
     def test_flag_skip_overrides(self):
         cfg = merge({"skip": ["a"]}, {"skip": ["x"]})

@@ -5,7 +5,7 @@ from typing import Optional
 
 DESCRIPTOR_NAME = ".spec-check.json"
 _KEYS = {"lang", "invariants", "manifests", "skip", "anchor_strict", "resolver",
-         "index", "shape_strict", "contracts"}
+         "index", "shape_strict", "contracts", "exclude_globs"}
 
 
 class DescriptorError(Exception):
@@ -47,6 +47,10 @@ def _typecheck(path, data):
         ok = isinstance(data["skip"], list) and all(isinstance(x, str) for x in data["skip"])
         if not ok:
             raise DescriptorError(f"{path}: skip must be a list of strings")
+    if "exclude_globs" in data:
+        ok = isinstance(data["exclude_globs"], list) and all(isinstance(x, str) for x in data["exclude_globs"])
+        if not ok:
+            raise DescriptorError(f"{path}: exclude_globs must be a list of strings")
     if "shape_strict" in data and data["shape_strict"] not in ("warn", "block"):
         raise DescriptorError(f"{path}: shape_strict must be 'warn' or 'block'")
 
@@ -61,6 +65,7 @@ _DEFAULTS = {
     "index": None,
     "shape_strict": "block",
     "contracts": None,
+    "exclude_globs": [],
 }
 
 
@@ -78,6 +83,7 @@ class ResolvedConfig:
     shape_strict: str
     contracts: Optional[str]
     contracts_from_descriptor: bool
+    exclude_globs: list
 
 
 def merge(flags, descriptor):
@@ -104,7 +110,8 @@ def merge(flags, descriptor):
     index, index_from_desc = pick("index")
     shape_strict, _ = pick("shape_strict")
     contracts, contracts_from_desc = pick("contracts")
+    exclude_globs, _ = pick("exclude_globs")
     return ResolvedConfig(lang, invariants, manifests, list(skip),
                           bool(anchor_strict), resolver, inv_from_desc,
                           index, index_from_desc, str(shape_strict),
-                          contracts, contracts_from_desc)
+                          contracts, contracts_from_desc, list(exclude_globs))

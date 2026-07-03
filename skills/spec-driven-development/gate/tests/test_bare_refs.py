@@ -87,6 +87,17 @@ class TestBareRefsBareTokens(unittest.TestCase):
             got = bare_refs(tmp)
             self.assertEqual(got, [])
 
+    def test_exclude_globs_prune_generated_bundles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write(tmp, "internal/docsportal/assets/swaggerui/bundle.js",
+                   "// INV-LEDGER-1 in vendored generated bundle\n")
+            _write(tmp, "service.go",
+                   "// INV-AUDIT-1 real source prose\n")
+            got = bare_refs(tmp, exclude_globs=["internal/docsportal/assets/**"])
+            tokens = [tok for _, _, tok in got]
+            self.assertNotIn("INV-LEDGER-1", tokens)
+            self.assertIn("INV-AUDIT-1", tokens)
+
 
 if __name__ == "__main__":
     unittest.main()

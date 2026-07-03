@@ -18,6 +18,19 @@ python3 spec_check.py init -root . --lang go   # scaffold a greenfield project
 Exit: `0` pass / `1` block (B1–B4 + coverage) / `2` usage or IO error.
 Precedence: explicit flag > `.spec-check.json` > built-in default. `--lang` is
 required unless the descriptor supplies it. `--skip a,b` prunes extra dirs.
+Descriptor `exclude_globs` prunes root-relative generated or vendored artifacts
+from tag scan and bare-ref audit, for example:
+
+```json
+{
+  "exclude_globs": [
+    "cmd/*/docs/**",
+    "cmd/cockpit-api/dist/**",
+    "internal/docsportal/assets/**"
+  ]
+}
+```
+
 `--resolver <cmd>` swaps coverage binding resolution out to an external command
 (non-code domains): it receives `test <file> <fn>` or `artifact <path>` as argv,
 exit 0 = resolved.

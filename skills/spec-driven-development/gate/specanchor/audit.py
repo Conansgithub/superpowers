@@ -1,6 +1,7 @@
 import os
 import re
 import glob as _glob
+import fnmatch
 from collections import defaultdict
 from datetime import date
 from . import gitinfo
@@ -126,19 +127,38 @@ _BARE_REFS_SKIP_DIRS = {".git", "node_modules", "vendor", "testdata", "conforman
                         "__pycache__", "dist", ".serena", ".codegraph"}
 
 
-def bare_refs(root: str, extra_skip=None):
+def _matches_exclude(root: str, path: str, patterns) -> bool:
+    rel = os.path.relpath(path, root).replace(os.sep, "/")
+    for pat in patterns or []:
+        pat = pat.replace(os.sep, "/")
+        if fnmatch.fnmatch(rel, pat):
+            return True
+        if pat.endswith("/**"):
+            prefix = pat[:-3].rstrip("/")
+            if fnmatch.fnmatch(rel, prefix) or rel.startswith(prefix + "/"):
+                return True
+    return False
+
+
+def bare_refs(root: str, extra_skip=None, exclude_globs=None):
     """扫 root 下所有文本文件，找裸方法论 token（既非绑定标签、又非 [[ref:]] 内）。
     返回 [(file, lineno, token)] 列表。默认关闭、不改退出码。
     """
     skip = _BARE_REFS_SKIP_DIRS | (extra_skip or set())
+    exclude_globs = list(exclude_globs or [])
     findings = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in skip)
+        dirnames[:] = sorted(
+            d for d in dirnames
+            if d not in skip and not _matches_exclude(root, os.path.join(dirpath, d), exclude_globs)
+        )
         for fname in sorted(filenames):
             _, ext = os.path.splitext(fname)
             if ext not in _BARE_REFS_TEXT_EXTS:
                 continue
             path = os.path.join(dirpath, fname)
+            if _matches_exclude(root, path, exclude_globs):
+                continue
             try:
                 with open(path, "r", encoding="utf-8", errors="surrogateescape") as f:
                     lines = f.read().split("\n")
